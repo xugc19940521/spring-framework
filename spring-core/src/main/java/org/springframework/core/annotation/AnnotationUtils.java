@@ -29,11 +29,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.function.Function;
 
 import org.springframework.core.BridgeMethodResolver;
 import org.springframework.core.annotation.AnnotationTypeMapping.MirrorSets.MirrorSet;
-import org.springframework.core.annotation.MergedAnnotation.MapValues;
+import org.springframework.core.annotation.MergedAnnotation.Adapt;
 import org.springframework.core.annotation.MergedAnnotations.SearchStrategy;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ConcurrentReferenceHashMap;
@@ -230,8 +229,8 @@ public abstract class AnnotationUtils {
 	}
 
 	private static <A extends Annotation> boolean isSingleLevelPresent(MergedAnnotation<A> mergedAnnotation) {
-		int depth = mergedAnnotation.getDepth();
-		return (depth == 0 || depth == 1);
+		int distance = mergedAnnotation.getDistance();
+		return (distance == 0 || distance == 1);
 	}
 
 	/**
@@ -376,7 +375,7 @@ public abstract class AnnotationUtils {
 		RepeatableContainers repeatableContainers = (containerAnnotationType != null ?
 				RepeatableContainers.of(annotationType, containerAnnotationType) :
 				RepeatableContainers.standardRepeatables());
-		return MergedAnnotations.from(annotatedElement, SearchStrategy.SUPER_CLASS,
+		return MergedAnnotations.from(annotatedElement, SearchStrategy.SUPERCLASS,
 						repeatableContainers, AnnotationFilter.PLAIN)
 				.stream(annotationType)
 				.filter(MergedAnnotationPredicates.firstRunOf(MergedAnnotation::getAggregateIndex))
@@ -525,7 +524,7 @@ public abstract class AnnotationUtils {
 			return method.getDeclaredAnnotation(annotationType);
 		}
 		// Exhaustive retrieval of merged annotations...
-		return MergedAnnotations.from(method, SearchStrategy.EXHAUSTIVE,
+		return MergedAnnotations.from(method, SearchStrategy.TYPE_HIERARCHY,
 					RepeatableContainers.none(), AnnotationFilter.PLAIN)
 				.get(annotationType).withNonMergedAttributes()
 				.synthesize(MergedAnnotation::isPresent).orElse(null);
@@ -564,7 +563,7 @@ public abstract class AnnotationUtils {
 			return clazz.getDeclaredAnnotation(annotationType);
 		}
 		// Exhaustive retrieval of merged annotations...
-		return MergedAnnotations.from(clazz, SearchStrategy.EXHAUSTIVE,
+		return MergedAnnotations.from(clazz, SearchStrategy.TYPE_HIERARCHY,
 					RepeatableContainers.none(), AnnotationFilter.PLAIN)
 				.get(annotationType).withNonMergedAttributes()
 				.synthesize(MergedAnnotation::isPresent).orElse(null);
@@ -600,7 +599,7 @@ public abstract class AnnotationUtils {
 			return null;
 		}
 
-		return (Class<?>) MergedAnnotations.from(clazz, SearchStrategy.SUPER_CLASS)
+		return (Class<?>) MergedAnnotations.from(clazz, SearchStrategy.SUPERCLASS)
 				.get(annotationType, MergedAnnotation::isDirectlyPresent)
 				.getSource();
 	}
@@ -637,7 +636,7 @@ public abstract class AnnotationUtils {
 			return null;
 		}
 
-		return (Class<?>) MergedAnnotations.from(clazz, SearchStrategy.SUPER_CLASS)
+		return (Class<?>) MergedAnnotations.from(clazz, SearchStrategy.SUPERCLASS)
 				.stream()
 				.filter(MergedAnnotationPredicates.typeIn(annotationTypes).and(MergedAnnotation::isDirectlyPresent))
 				.map(MergedAnnotation::getSource)
@@ -857,14 +856,11 @@ public abstract class AnnotationUtils {
 			@Nullable AnnotatedElement annotatedElement, Annotation annotation,
 			boolean classValuesAsString, boolean nestedAnnotationsAsMap) {
 
-		MapValues[] mapValues = MapValues.of(classValuesAsString, nestedAnnotationsAsMap);
+		Adapt[] adaptations = Adapt.values(classValuesAsString, nestedAnnotationsAsMap);
 		return MergedAnnotation.from(annotatedElement, annotation)
 				.withNonMergedAttributes()
-				.asMap(getAnnotationAttributesFactory(), mapValues);
-	}
-
-	private static Function<MergedAnnotation<?>, AnnotationAttributes> getAnnotationAttributesFactory() {
-		return (annotation -> new AnnotationAttributes(annotation.getType(), true));
+				.asMap(mergedAnnotation ->
+						new AnnotationAttributes(mergedAnnotation.getType(), true), adaptations);
 	}
 
 	/**
@@ -902,15 +898,16 @@ public abstract class AnnotationUtils {
 			for (int i = 0; i < methods.size(); i++) {
 				Method method = methods.get(i);
 				Object defaultValue = method.getDefaultValue();
-				if(defaultValue != null) {
+				if (defaultValue != null) {
 					result.put(method.getName(), new DefaultValueHolder(defaultValue));
 				}
 			}
 		}
 		else {
 			// If we have nested annotations, we need them as nested maps
-			AnnotationAttributes attributes = MergedAnnotation.from(annotationType)
-					.asMap(getAnnotationAttributesFactory(), MapValues.ANNOTATION_TO_MAP);
+			AnnotationAttributes attributes = MergedAnnotation.of(annotationType)
+					.asMap(annotation ->
+							new AnnotationAttributes(annotation.getType(), true), Adapt.ANNOTATION_TO_MAP);
 			for (Map.Entry<String, Object> element : attributes.entrySet()) {
 				result.put(element.getKey(), new DefaultValueHolder(element.getValue()));
 			}
@@ -1154,7 +1151,7 @@ public abstract class AnnotationUtils {
 		if (annotationType == null || !StringUtils.hasText(attributeName)) {
 			return null;
 		}
-		return MergedAnnotation.from(annotationType).getDefaultValue(attributeName).orElse(null);
+		return MergedAnnotation.of(annotationType).getDefaultValue(attributeName).orElse(null);
 	}
 
 	/**
@@ -1235,7 +1232,7 @@ public abstract class AnnotationUtils {
 			Class<A> annotationType, @Nullable AnnotatedElement annotatedElement) {
 
 		try {
-			return MergedAnnotation.from(annotatedElement, annotationType, attributes).synthesize();
+			return MergedAnnotation.of(annotatedElement, annotationType, attributes).synthesize();
 		}
 		catch (NoSuchElementException | IllegalStateException ex) {
 			throw new IllegalArgumentException(ex);

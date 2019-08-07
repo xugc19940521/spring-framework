@@ -42,7 +42,10 @@ final class TypeMappedAnnotations implements MergedAnnotations {
 
 	private static final AnnotationFilter FILTER_ALL = (annotationType -> true);
 
-	private static final MergedAnnotations NONE = new TypeMappedAnnotations(
+	/**
+	 * Shared instance that can be used when there are no annotations.
+	 */
+	static final MergedAnnotations NONE = new TypeMappedAnnotations(
 			null, new Annotation[0], RepeatableContainers.none(), FILTER_ALL);
 
 
@@ -273,7 +276,7 @@ final class TypeMappedAnnotations implements MergedAnnotations {
 
 	/**
 	 * {@link AnnotationsProcessor} used to detect if an annotation is directly
-	 * or meta-present.
+	 * present or meta-present.
 	 */
 	private static final class IsPresent implements AnnotationsProcessor<Object, Boolean> {
 
@@ -358,8 +361,7 @@ final class TypeMappedAnnotations implements MergedAnnotations {
 
 
 	/**
-	 * {@link AnnotationsProcessor} that finds a single
-	 * {@link MergedAnnotation}.
+	 * {@link AnnotationsProcessor} that finds a single {@link MergedAnnotation}.
 	 */
 	private class MergedAnnotationFinder<A extends Annotation>
 			implements AnnotationsProcessor<Object, MergedAnnotation<A>> {
@@ -540,7 +542,7 @@ final class TypeMappedAnnotations implements MergedAnnotations {
 
 	/**
 	 * {@link Spliterator} used to consume merged annotations from the
-	 * aggregates in depth fist order.
+	 * aggregates in distance fist order.
 	 */
 	private class AggregatesSpliterator<A extends Annotation> implements Spliterator<MergedAnnotation<A>> {
 
@@ -576,15 +578,15 @@ final class TypeMappedAnnotations implements MergedAnnotations {
 			if (this.mappingCursors == null) {
 				this.mappingCursors = new int[aggregate.size()];
 			}
-			int lowestDepth = Integer.MAX_VALUE;
+			int lowestDistance = Integer.MAX_VALUE;
 			int annotationResult = -1;
 			for (int annotationIndex = 0; annotationIndex < aggregate.size(); annotationIndex++) {
 				AnnotationTypeMapping mapping = getNextSuitableMapping(aggregate, annotationIndex);
-				if (mapping != null && mapping.getDepth() < lowestDepth) {
+				if (mapping != null && mapping.getDistance() < lowestDistance) {
 					annotationResult = annotationIndex;
-					lowestDepth = mapping.getDepth();
+					lowestDistance = mapping.getDistance();
 				}
-				if (lowestDepth == 0) {
+				if (lowestDistance == 0) {
 					break;
 				}
 			}

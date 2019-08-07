@@ -16,8 +16,11 @@
 
 package org.springframework.web.reactive.function.server
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.reactive.flow.asFlow
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.codec.multipart.Part
 import org.springframework.util.MultiValueMap
@@ -47,6 +50,16 @@ inline fun <reified T : Any> ServerRequest.bodyToMono(): Mono<T> =
  */
 inline fun <reified T : Any> ServerRequest.bodyToFlux(): Flux<T> =
 		bodyToFlux(object : ParameterizedTypeReference<T>() {})
+
+/**
+ * Coroutines [kotlinx.coroutines.flow.Flow] based variant of [ServerRequest.bodyToFlux].
+ *
+ * @author Sebastien Deleuze
+ * @since 5.2
+ */
+@ExperimentalCoroutinesApi
+inline fun <reified T : Any> ServerRequest.bodyToFlow(): Flow<T> =
+		bodyToFlux<T>().asFlow()
 
 /**
  * Non-nullable Coroutines variant of [ServerRequest.bodyToMono].

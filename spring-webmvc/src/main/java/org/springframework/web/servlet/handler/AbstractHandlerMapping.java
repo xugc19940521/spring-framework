@@ -117,7 +117,7 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 	public void setAlwaysUseFullPath(boolean alwaysUseFullPath) {
 		this.urlPathHelper.setAlwaysUseFullPath(alwaysUseFullPath);
 		if (this.corsConfigurationSource instanceof UrlBasedCorsConfigurationSource) {
-			((UrlBasedCorsConfigurationSource)this.corsConfigurationSource).setAlwaysUseFullPath(alwaysUseFullPath);
+			((UrlBasedCorsConfigurationSource) this.corsConfigurationSource).setAlwaysUseFullPath(alwaysUseFullPath);
 		}
 	}
 
@@ -128,7 +128,7 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 	public void setUrlDecode(boolean urlDecode) {
 		this.urlPathHelper.setUrlDecode(urlDecode);
 		if (this.corsConfigurationSource instanceof UrlBasedCorsConfigurationSource) {
-			((UrlBasedCorsConfigurationSource)this.corsConfigurationSource).setUrlDecode(urlDecode);
+			((UrlBasedCorsConfigurationSource) this.corsConfigurationSource).setUrlDecode(urlDecode);
 		}
 	}
 
@@ -139,7 +139,7 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 	public void setRemoveSemicolonContent(boolean removeSemicolonContent) {
 		this.urlPathHelper.setRemoveSemicolonContent(removeSemicolonContent);
 		if (this.corsConfigurationSource instanceof UrlBasedCorsConfigurationSource) {
-			((UrlBasedCorsConfigurationSource)this.corsConfigurationSource).setRemoveSemicolonContent(removeSemicolonContent);
+			((UrlBasedCorsConfigurationSource) this.corsConfigurationSource).setRemoveSemicolonContent(removeSemicolonContent);
 		}
 	}
 
@@ -153,7 +153,7 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 		Assert.notNull(urlPathHelper, "UrlPathHelper must not be null");
 		this.urlPathHelper = urlPathHelper;
 		if (this.corsConfigurationSource instanceof UrlBasedCorsConfigurationSource) {
-			((UrlBasedCorsConfigurationSource)this.corsConfigurationSource).setUrlPathHelper(urlPathHelper);
+			((UrlBasedCorsConfigurationSource) this.corsConfigurationSource).setUrlPathHelper(urlPathHelper);
 		}
 	}
 
@@ -173,7 +173,7 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 		Assert.notNull(pathMatcher, "PathMatcher must not be null");
 		this.pathMatcher = pathMatcher;
 		if (this.corsConfigurationSource instanceof UrlBasedCorsConfigurationSource) {
-			((UrlBasedCorsConfigurationSource)this.corsConfigurationSource).setPathMatcher(pathMatcher);
+			((UrlBasedCorsConfigurationSource) this.corsConfigurationSource).setPathMatcher(pathMatcher);
 		}
 	}
 
@@ -212,6 +212,7 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 			source.setCorsConfigurations(corsConfigurations);
 			source.setPathMatcher(this.pathMatcher);
 			source.setUrlPathHelper(this.urlPathHelper);
+			source.setLookupPathAttributeName(LOOKUP_PATH);
 			this.corsConfigurationSource = source;
 		}
 		else {
@@ -463,7 +464,7 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 		HandlerExecutionChain chain = (handler instanceof HandlerExecutionChain ?
 				(HandlerExecutionChain) handler : new HandlerExecutionChain(handler));
 
-		String lookupPath = this.urlPathHelper.getLookupPathForRequest(request);
+		String lookupPath = this.urlPathHelper.getLookupPathForRequest(request, LOOKUP_PATH);
 		for (HandlerInterceptor interceptor : this.adaptedInterceptors) {
 			if (interceptor instanceof MappedInterceptor) {
 				MappedInterceptor mappedInterceptor = (MappedInterceptor) interceptor;
@@ -525,7 +526,7 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 			chain = new HandlerExecutionChain(new PreFlightHandler(config), interceptors);
 		}
 		else {
-			chain.addInterceptor(new CorsInterceptor(config));
+			chain.addInterceptor(0, new CorsInterceptor(config));
 		}
 		return chain;
 	}

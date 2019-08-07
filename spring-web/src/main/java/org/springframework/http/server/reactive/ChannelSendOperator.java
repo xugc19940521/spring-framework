@@ -181,7 +181,15 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 				else if (this.state == State.NEW) {
 					this.item = item;
 					this.state = State.FIRST_SIGNAL_RECEIVED;
-					writeFunction.apply(this).subscribe(this.writeCompletionBarrier);
+					Publisher<Void> result;
+					try {
+						result = writeFunction.apply(this);
+					}
+					catch (Throwable ex) {
+						this.writeCompletionBarrier.onError(ex);
+						return;
+					}
+					result.subscribe(this.writeCompletionBarrier);
 				}
 				else {
 					if (this.subscription != null) {
@@ -230,7 +238,15 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 				else if (this.state == State.NEW) {
 					this.completed = true;
 					this.state = State.FIRST_SIGNAL_RECEIVED;
-					writeFunction.apply(this).subscribe(this.writeCompletionBarrier);
+					Publisher<Void> result;
+					try {
+						result = writeFunction.apply(this);
+					}
+					catch (Throwable ex) {
+						this.writeCompletionBarrier.onError(ex);
+						return;
+					}
+					result.subscribe(this.writeCompletionBarrier);
 				}
 				else {
 					this.completed = true;
@@ -394,7 +410,12 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 
 		@Override
 		public void onError(Throwable ex) {
-			this.completionSubscriber.onError(ex);
+			try {
+				this.completionSubscriber.onError(ex);
+			}
+			finally {
+				this.writeBarrier.releaseCachedItem();
+			}
 		}
 
 		@Override
