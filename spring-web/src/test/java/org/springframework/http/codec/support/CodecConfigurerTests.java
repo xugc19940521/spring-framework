@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.protobuf.ExtensionRegistry;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.core.ResolvableType;
 import org.springframework.core.codec.ByteArrayDecoder;
@@ -266,6 +266,14 @@ public class CodecConfigurerTests {
 		assertEncoderInstance(jacksonEncoder);
 		assertEncoderInstance(protobufEncoder);
 		assertEncoderInstance(jaxb2Encoder);
+	}
+
+	@Test
+	public void cloneConfigurer() {
+		CodecConfigurer clone = this.configurer.clone();
+		this.configurer.registerDefaults(false);
+		assertThat(this.configurer.getReaders().size()).isEqualTo(0);
+		assertThat(clone.getReaders().size()).isEqualTo(11);
 	}
 
 	private Decoder<?> getNextDecoder(List<HttpMessageReader<?>> readers) {

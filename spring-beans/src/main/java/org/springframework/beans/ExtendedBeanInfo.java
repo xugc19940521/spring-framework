@@ -145,11 +145,10 @@ class ExtendedBeanInfo implements BeanInfo {
 
 	public static boolean isCandidateWriteMethod(Method method) {
 		String methodName = method.getName();
-		Class<?>[] parameterTypes = method.getParameterTypes();
-		int nParams = parameterTypes.length;
+		int nParams = method.getParameterCount();
 		return (methodName.length() > 3 && methodName.startsWith("set") && Modifier.isPublic(method.getModifiers()) &&
 				(!void.class.isAssignableFrom(method.getReturnType()) || Modifier.isStatic(method.getModifiers())) &&
-				(nParams == 1 || (nParams == 2 && int.class == parameterTypes[0])));
+				(nParams == 1 || (nParams == 2 && int.class == method.getParameterTypes()[0])));
 	}
 
 	private void handleCandidateWriteMethod(Method method) throws IntrospectionException {
@@ -209,7 +208,7 @@ class ExtendedBeanInfo implements BeanInfo {
 	}
 
 	private String propertyNameFor(Method method) {
-		return Introspector.decapitalize(method.getName().substring(3, method.getName().length()));
+		return Introspector.decapitalize(method.getName().substring(3));
 	}
 
 
@@ -535,11 +534,13 @@ class ExtendedBeanInfo implements BeanInfo {
 		public int compare(PropertyDescriptor desc1, PropertyDescriptor desc2) {
 			String left = desc1.getName();
 			String right = desc2.getName();
+			byte[] leftBytes = left.getBytes();
+			byte[] rightBytes = right.getBytes();
 			for (int i = 0; i < left.length(); i++) {
 				if (right.length() == i) {
 					return 1;
 				}
-				int result = left.getBytes()[i] - right.getBytes()[i];
+				int result = leftBytes[i] - rightBytes[i];
 				if (result != 0) {
 					return result;
 				}

@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.mail.internet.MimeUtility;
 
 import org.springframework.core.io.Resource;
@@ -39,6 +40,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.StreamingHttpOutputMessage;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.util.MultiValueMap;
@@ -202,22 +204,18 @@ public class FormHttpMessageConverter implements HttpMessageConverter<MultiValue
 	 * Add {@link MediaType} objects to be supported by this converter.
 	 * <p>The supplied {@code MediaType} objects will be appended to the list
 	 * of {@linkplain #getSupportedMediaTypes() supported MediaType objects}.
-	 * @param supportedMediaTypes a var-args list of {@code MediaType} objects
-	 * to add
+	 * @param supportedMediaTypes a var-args list of {@code MediaType} objects to add
 	 * @since 5.2
 	 * @see #setSupportedMediaTypes(List)
 	 */
 	public void addSupportedMediaTypes(MediaType... supportedMediaTypes) {
 		Assert.notNull(supportedMediaTypes, "'supportedMediaTypes' must not be null");
 		Assert.noNullElements(supportedMediaTypes, "'supportedMediaTypes' must not contain null elements");
-		for (MediaType mediaType : supportedMediaTypes) {
-			this.supportedMediaTypes.add(mediaType);
-		}
+		Collections.addAll(this.supportedMediaTypes, supportedMediaTypes);
 	}
 
 	/**
 	 * {@inheritDoc}
-	 *
 	 * @see #setSupportedMediaTypes(List)
 	 * @see #addSupportedMediaTypes(MediaType...)
 	 */
@@ -386,7 +384,7 @@ public class FormHttpMessageConverter implements HttpMessageConverter<MultiValue
 	private void writeForm(MultiValueMap<String, Object> formData, @Nullable MediaType contentType,
 			HttpOutputMessage outputMessage) throws IOException {
 
-		contentType = getMediaType(contentType);
+		contentType = getFormContentType(contentType);
 		outputMessage.getHeaders().setContentType(contentType);
 
 		Charset charset = contentType.getCharset();
@@ -404,21 +402,37 @@ public class FormHttpMessageConverter implements HttpMessageConverter<MultiValue
 		}
 	}
 
-	private MediaType getMediaType(@Nullable MediaType mediaType) {
-		if (mediaType == null) {
+	/**
+	 * Return the content type used to write forms, given the preferred content type.
+	 * By default, this method returns the given content type, but adds the
+	 * {@linkplain #setCharset(Charset) charset} if it does not have one.
+	 * If {@code contentType} is {@code null},
+	 * {@code application/x-www-form-urlencoded; charset=UTF-8} is returned.
+	 *
+	 * <p>Subclasses can override this method to change this behavior.
+	 * @param contentType the preferred content type, can be {@code null}
+	 * @return the content type to be used
+	 * @since 5.2.2
+	 */
+	protected MediaType getFormContentType(@Nullable MediaType contentType) {
+		if (contentType == null) {
 			return DEFAULT_FORM_DATA_MEDIA_TYPE;
 		}
-		else if (mediaType.getCharset() == null) {
-			return new MediaType(mediaType, this.charset);
+		else if (contentType.getCharset() == null) {
+			return new MediaType(contentType, this.charset);
 		}
 		else {
-			return mediaType;
+			return contentType;
 		}
 	}
 
 	protected String serializeForm(MultiValueMap<String, Object> formData, Charset charset) {
 		StringBuilder builder = new StringBuilder();
-		formData.forEach((name, values) ->
+		formData.forEach((name, values) -> {
+				if (name == null) {
+					Assert.isTrue(CollectionUtils.isEmpty(values), "Null name in form data: " + formData);
+					return;
+				}
 				values.forEach(value -> {
 					try {
 						if (builder.length() != 0) {
@@ -433,7 +447,8 @@ public class FormHttpMessageConverter implements HttpMessageConverter<MultiValue
 					catch (UnsupportedEncodingException ex) {
 						throw new IllegalStateException(ex);
 					}
-				}));
+				});
+		});
 
 		return builder.toString();
 	}
